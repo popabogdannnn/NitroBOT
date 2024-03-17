@@ -1,2 +1,3 @@
-
-env.py
+.env
+*.csv
+__pycache__
