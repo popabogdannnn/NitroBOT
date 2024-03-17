@@ -12,11 +12,12 @@ TOKEN = os.getenv('TOKEN')
 DB_PATH = os.getenv('DB_PATH')
 TEAM_NAME = 'Dacă da, care este numele echipei?'
 DISCORD_USER = 'Username Discord'
+HAS_TEAM = "Faci deja parte dintr-o echipă?"
 TEAM_ROLE_COLOR = 0x2741F8
 
-db = database.load(DB_PATH)
-
 intents = discord.Intents.all()
+
+db = database.load(DB_PATH)
 
 bot = commands.Bot(command_prefix = '$', intents = intents)
 
@@ -26,10 +27,10 @@ async def add_info(ctx, team_name):
     role = get(guild.roles, name = team_name)
     if(role is None):
         role = await guild.create_role(name = team_name, colour = discord.Colour(TEAM_ROLE_COLOR))
-        await ctx.send(f"Am creat rolul {team_name}.")
+        await ctx.send(f"Am creat rolul {team_name}")
     admin_role = get(guild.roles, name = "Admin")
 
-    
+    team_name = team_name.lower()
     category = get(guild.categories, name = team_name)
     if(category is None):
         category = await guild.create_category(name = team_name)
@@ -56,23 +57,27 @@ async def assign_user(guild, discord_name, team_name):
 
 async def update_server_info(ctx, db): 
     for _, participant in db.iterrows():
-        team_name = participant[TEAM_NAME].strip()
         discord_name = participant[DISCORD_USER].strip()
-
+        if(participant[HAS_TEAM] == "Nu"):
+            team_name = "Single"
+        else:
+            team_name = participant[TEAM_NAME].strip()
         await add_info(ctx, team_name)
         await assign_user(ctx.guild, discord_name, team_name)
 
 
+
 @bot.command()
 @commands.has_any_role("Admin")
-async def update(ctx, url):
-    # subprocess.run(
-    #     args = ["wget", "-O", "new_db.csv", url],
-    #     capture_output = True,
-    # )
-    
-    await update_server_info(ctx, db)
+async def update(ctx):
+    global db
+    for att in ctx.message.attachments: 
+        await att.save("new_db.csv")
+        new_db = database.load("new_db.csv")
+        db = database.merge(db, new_db)
+        await update_server_info(ctx, db)
 
+    database.save(db, "db.csv")
     await ctx.send(f"Totul s-a desfasurat cu succes!")
 
 @bot.event
@@ -81,9 +86,14 @@ async def on_ready():
 
 @bot.event
 async def on_member_join(member):
+    global db
     for _, participant in db.iterrows():
         if(participant[DISCORD_USER].strip() == member.name):
-            await assign_user(member.guild, member.name, participant[TEAM_NAME].strip())
+            if(participant[HAS_TEAM] == "Nu"):
+                team_name = "Single"
+            else:
+                team_name = participant[TEAM_NAME].strip()
+            await assign_user(member.guild, member.name, team_name)
             break
             
 
