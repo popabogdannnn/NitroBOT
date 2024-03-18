@@ -12,11 +12,14 @@ TOKEN = os.getenv('TOKEN')
 DB_PATH = os.getenv('DB_PATH')
 TEAM_NAME = 'Dacă da, care este numele echipei?'
 DISCORD_USER = 'Username Discord'
-HAS_TEAM = "Faci deja parte dintr-o echipă?"
+HAS_TEAM = 'Faci deja parte dintr-o echipă?'
+IS_ONSITE = 'Vei participa fizic la competiție?'
 TEAM_ROLE_COLOR = 0x2741F8
 YES = "Da"
 NO = "Nu"
 SINGLE = "Single"
+ONLINE_ROLE = "Online"
+ONSITE_ROLE = "On-site"
 
 intents = discord.Intents.all()
 
@@ -50,11 +53,11 @@ async def add_info(ctx, team_name):
         await guild.create_voice_channel(name = "voice", category = category)
         await ctx.send(f"Am creat categoria {team_name}")
 
-async def assign_user(guild, discord_name, team_name):
+async def assign_user(guild, discord_name, role_name):
     user = get(guild.members, name = discord_name)
     if(user is None):
         return
-    role = get(guild.roles, name = team_name)
+    role = get(guild.roles, name = role_name)
     await user.add_roles(role)
 
 
@@ -65,9 +68,14 @@ async def update_server_info(ctx, db):
             team_name = SINGLE
         else:
             team_name = participant[TEAM_NAME].strip()
+        
+        location_role = ONLINE_ROLE
+        if(participant[IS_ONSITE] == YES):
+            location_role = ONSITE_ROLE
+
         await add_info(ctx, team_name)
         await assign_user(ctx.guild, discord_name, team_name)
-
+        await assign_user(ctx.guild, discord_name, location_role)
 
 
 @bot.command()
@@ -96,12 +104,15 @@ async def on_member_join(member):
                 team_name = SINGLE
             else:
                 team_name = participant[TEAM_NAME].strip()
+
+            location_role = ONLINE_ROLE
+            if(participant[IS_ONSITE] == YES):
+                location_role = ONSITE_ROLE
+            
             await assign_user(member.guild, member.name, team_name)
+            await assign_user(member.guild, member.name, location_role)
             break
             
-
-
-
 bot.run(TOKEN)
 
 
