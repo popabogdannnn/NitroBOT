@@ -14,6 +14,9 @@ TEAM_NAME = 'Dacă da, care este numele echipei?'
 DISCORD_USER = 'Username Discord'
 HAS_TEAM = "Faci deja parte dintr-o echipă?"
 TEAM_ROLE_COLOR = 0x2741F8
+YES = "Da"
+NO = "Nu"
+SINGLE = "Single"
 
 intents = discord.Intents.all()
 
@@ -58,8 +61,8 @@ async def assign_user(guild, discord_name, team_name):
 async def update_server_info(ctx, db): 
     for _, participant in db.iterrows():
         discord_name = participant[DISCORD_USER].strip()
-        if(participant[HAS_TEAM] == "Nu"):
-            team_name = "Single"
+        if(participant[HAS_TEAM] == NO):
+            team_name = SINGLE
         else:
             team_name = participant[TEAM_NAME].strip()
         await add_info(ctx, team_name)
@@ -89,8 +92,8 @@ async def on_member_join(member):
     global db
     for _, participant in db.iterrows():
         if(participant[DISCORD_USER].strip() == member.name):
-            if(participant[HAS_TEAM] == "Nu"):
-                team_name = "Single"
+            if(participant[HAS_TEAM] == NO):
+                team_name = SINGLE
             else:
                 team_name = participant[TEAM_NAME].strip()
             await assign_user(member.guild, member.name, team_name)
